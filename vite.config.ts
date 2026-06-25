@@ -7,4 +7,9 @@ export default defineConfig({
     target: 'es2020',
     cssMinify: true,
   },
+  server: {
+    proxy: {
+      '/api': 'http://localhost:3001',
+    },
+  },
 })

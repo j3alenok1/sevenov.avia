@@ -1,0 +1,350 @@
+.admin {
+  min-height: 100vh;
+  background: var(--bg-dark);
+  color: var(--text-primary);
+  padding: 24px;
+}
+
+.admin--login {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.admin__login-card {
+  width: 100%;
+  max-width: 400px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 40px 32px;
+  text-align: center;
+}
+
+.admin__login-card h1 {
+  font-size: 1.5rem;
+  margin-bottom: 4px;
+}
+
+.admin__login-card > p {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  margin-bottom: 28px;
+}
+
+.admin__back {
+  display: inline-block;
+  margin-top: 20px;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.admin__back:hover {
+  color: var(--accent-gold);
+}
+
+.admin__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+}
+
+.admin__header h1 {
+  font-size: 1.75rem;
+  margin-bottom: 4px;
+}
+
+.admin__header p {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+.admin__header-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.admin__filters {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+
+.admin__filter {
+  padding: 8px 16px;
+  border-radius: 50px;
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: border-color 0.2s, color 0.2s, background 0.2s;
+}
+
+.admin__filter:hover,
+.admin__filter--active {
+  border-color: var(--accent-gold);
+  color: var(--text-primary);
+  background: rgba(201, 162, 39, 0.1);
+}
+
+.admin__field {
+  display: block;
+  text-align: left;
+  margin-bottom: 16px;
+}
+
+.admin__field span {
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+}
+
+.admin__field input,
+.admin__field textarea,
+.admin__field select {
+  width: 100%;
+  padding: 12px 14px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: 0.95rem;
+}
+
+.admin__field input:focus,
+.admin__field textarea:focus,
+.admin__field select:focus {
+  outline: none;
+  border-color: var(--accent-blue);
+}
+
+.admin__field--full {
+  grid-column: 1 / -1;
+}
+
+.admin__btn-full {
+  width: 100%;
+}
+
+.admin__error {
+  color: #ff6b6b;
+  font-size: 0.85rem;
+  margin-bottom: 12px;
+}
+
+.admin__error--bar {
+  padding: 12px 16px;
+  background: rgba(255, 107, 107, 0.1);
+  border: 1px solid rgba(255, 107, 107, 0.3);
+  border-radius: var(--radius-sm);
+  margin-bottom: 16px;
+}
+
+.admin__loading,
+.admin__empty {
+  text-align: center;
+  color: var(--text-muted);
+  padding: 48px;
+}
+
+.admin__table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-card);
+}
+
+.admin__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.admin__table th {
+  text-align: left;
+  padding: 14px 16px;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+
+.admin__table td {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+}
+
+.admin__table tbody tr {
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.admin__table tbody tr:hover {
+  background: rgba(74, 158, 255, 0.05);
+}
+
+.admin__cell-message {
+  max-width: 240px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--text-secondary);
+}
+
+.admin__status {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 50px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.admin__status--new {
+  background: rgba(74, 158, 255, 0.15);
+  color: #7ab8ff;
+}
+
+.admin__status--processing {
+  background: rgba(201, 162, 39, 0.15);
+  color: var(--accent-gold-light);
+}
+
+.admin__status--done {
+  background: rgba(76, 175, 80, 0.15);
+  color: #81c784;
+}
+
+.admin__status--cancelled {
+  background: rgba(255, 107, 107, 0.12);
+  color: #ff8a8a;
+}
+
+.admin__delete-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  background: transparent;
+  cursor: pointer;
+  transition: color 0.2s, border-color 0.2s, background 0.2s;
+}
+
+.admin__delete-btn:hover {
+  color: #ff6b6b;
+  border-color: rgba(255, 107, 107, 0.4);
+  background: rgba(255, 107, 107, 0.08);
+}
+
+.admin__modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  padding: 20px;
+}
+
+.admin__modal {
+  width: 100%;
+  max-width: 560px;
+  max-height: 90vh;
+  overflow-y: auto;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 28px;
+}
+
+.admin__modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.admin__modal-header h2 {
+  font-size: 1.25rem;
+}
+
+.admin__close {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.admin__modal-meta {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-bottom: 24px;
+}
+
+.admin__modal-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0 16px;
+}
+
+.admin__modal-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border);
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.admin__modal-buttons {
+  display: flex;
+  gap: 10px;
+}
+
+.admin__delete-link {
+  background: none;
+  border: none;
+  color: #ff6b6b;
+  font-size: 0.85rem;
+  cursor: pointer;
+  padding: 0;
+}
+
+.admin__delete-link:hover {
+  text-decoration: underline;
+}
+
+@media (max-width: 768px) {
+  .admin {
+    padding: 16px;
+  }
+
+  .admin__modal-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .admin__cell-message {
+    max-width: 120px;
+  }
+}

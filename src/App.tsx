@@ -1,31 +1,23 @@
-import { Header } from './components/Header'
-import { Hero } from './components/Hero'
-import { About } from './components/About'
-import { Fleet } from './components/Fleet'
-import { Services } from './components/Services'
-import { Pricing } from './components/Pricing'
-import { Advantages } from './components/Advantages'
-import { Team } from './components/Team'
-import { Contact } from './components/Contact'
-import { Footer } from './components/Footer'
-import { WhatsAppButton } from './components/WhatsAppButton'
+import { Navigate, Route, Routes } from 'react-router-dom'
+import { Site } from './Site'
+import { AdminLoginPage } from './pages/AdminLoginPage'
+import { AdminPage } from './pages/AdminPage'
+import { AdminGuard } from './pages/AdminGuard'
 
 export default function App() {
   return (
-    <>
-      <Header />
-      <main>
-        <Hero />
-        <About />
-        <Fleet />
-        <Services />
-        <Pricing />
-        <Advantages />
-        <Team />
-        <Contact />
-      </main>
-      <Footer />
-      <WhatsAppButton />
-    </>
+    <Routes>
+      <Route path="/" element={<Site />} />
+      <Route path="/admin/login" element={<AdminLoginPage />} />
+      <Route
+        path="/admin"
+        element={(
+          <AdminGuard>
+            <AdminPage />
+          </AdminGuard>
+        )}
+      />
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
   )
 }

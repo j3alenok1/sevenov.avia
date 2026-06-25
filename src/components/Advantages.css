@@ -1,0 +1,51 @@
+.advantages {
+  background: var(--bg-dark);
+}
+
+.advantages__grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+
+.advantages__item {
+  position: relative;
+  padding: 28px;
+  overflow: hidden;
+}
+
+.advantages__num {
+  font-size: 2.5rem;
+  font-weight: 800;
+  color: rgba(74, 158, 255, 0.08);
+  position: absolute;
+  top: 12px;
+  right: 16px;
+  line-height: 1;
+}
+
+.advantages__item h3 {
+  font-size: 1.05rem;
+  font-weight: 700;
+  margin-bottom: 8px;
+  position: relative;
+}
+
+.advantages__item p {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  position: relative;
+}
+
+@media (max-width: 900px) {
+  .advantages__grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 480px) {
+  .advantages__grid {
+    grid-template-columns: 1fr;
+  }
+}

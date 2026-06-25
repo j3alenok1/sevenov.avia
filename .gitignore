@@ -13,6 +13,7 @@ dist-ssr
 dist-server
 data
 .env
+.env.local
 *.local
 
 # Editor directories and files

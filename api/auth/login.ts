@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { createToken, verifyPassword } from '../lib/auth.js'
-import { json, methodNotAllowed, readBody } from '../lib/api-utils.js'
+import { createToken, verifyPassword } from '../../lib/auth.js'
+import { json, methodNotAllowed, readBody } from '../../lib/api-utils.js'
 
 export default function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') {

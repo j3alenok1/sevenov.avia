@@ -1,10 +1,10 @@
-import { neon, type NeonQueryFunction } from '@neondatabase/serverless'
+import pg from 'pg'
 import type { Lead, LeadInput } from './types.js'
 
-type SqlFn = NeonQueryFunction<false, true>
+const { Pool } = pg
 
-let pooledSql: SqlFn | null = null
-let directSql: SqlFn | null = null
+let pooledPool: pg.Pool | null = null
+let directPool: pg.Pool | null = null
 
 function pickEnv(...keys: string[]): string | undefined {
   for (const key of keys) {
@@ -15,14 +15,16 @@ function pickEnv(...keys: string[]): string | undefined {
 }
 
 function toDirectUrl(url: string): string {
-  return url.replace('-pooler.', '.')
+  return url
+    .replace('pooled.db.prisma.io', 'db.prisma.io')
+    .replace('-pooler.', '.')
 }
 
 function getPooledConnectionString(): string {
-  const url = pickEnv('POSTGRES_URL', 'DATABASE_URL', 'PRISMA_DATABASE_URL', 'STORAGE_URL')
+  const url = pickEnv('DATABASE_URL', 'POSTGRES_URL', 'PRISMA_DATABASE_URL', 'STORAGE_URL')
   if (!url) {
     throw new Error(
-      'Не задан URL базы (POSTGRES_URL / DATABASE_URL). Подключите Prisma Postgres в Vercel.'
+      'Не задан URL базы (DATABASE_URL / POSTGRES_URL). Подключите Prisma Postgres в Vercel.'
     )
   }
   return url
@@ -32,26 +34,36 @@ function getDirectConnectionString(): string {
   const direct = pickEnv('POSTGRES_URL_NON_POOLING')
   if (direct) return direct
 
-  const pooled = pickEnv('POSTGRES_URL', 'DATABASE_URL', 'PRISMA_DATABASE_URL', 'STORAGE_URL')
+  const pooled = pickEnv('DATABASE_URL', 'POSTGRES_URL', 'PRISMA_DATABASE_URL', 'STORAGE_URL')
   if (pooled) return toDirectUrl(pooled)
 
   throw new Error(
-    'Не задан URL базы (POSTGRES_URL / DATABASE_URL). Подключите Prisma Postgres в Vercel.'
+    'Не задан URL базы (DATABASE_URL / POSTGRES_URL). Подключите Prisma Postgres в Vercel.'
   )
 }
 
-function getPooledSql(): SqlFn {
-  if (!pooledSql) {
-    pooledSql = neon(getPooledConnectionString(), { fullResults: true })
-  }
-  return pooledSql
+function createPool(connectionString: string): pg.Pool {
+  return new Pool({
+    connectionString,
+    ssl: { rejectUnauthorized: false },
+    max: 1,
+    idleTimeoutMillis: 10_000,
+    connectionTimeoutMillis: 10_000,
+  })
 }
 
-function getDirectSql(): SqlFn {
-  if (!directSql) {
-    directSql = neon(getDirectConnectionString(), { fullResults: true })
+function getPooledPool(): pg.Pool {
+  if (!pooledPool) {
+    pooledPool = createPool(getPooledConnectionString())
   }
-  return directSql
+  return pooledPool
+}
+
+function getDirectPool(): pg.Pool {
+  if (!directPool) {
+    directPool = createPool(getDirectConnectionString())
+  }
+  return directPool
 }
 
 const MIGRATE_SQL = `
@@ -67,11 +79,14 @@ const MIGRATE_SQL = `
   )
 `
 
+const LEAD_COLUMNS =
+  'id, name, phone, message, status, admin_notes, created_at, updated_at'
+
 let migrated = false
 
 export async function ensureSchema(): Promise<void> {
   if (migrated) return
-  await getDirectSql()(MIGRATE_SQL)
+  await getDirectPool().query(MIGRATE_SQL)
   migrated = true
 }
 
@@ -90,29 +105,29 @@ function mapRow(row: Record<string, unknown>): Lead {
 
 export async function getAllLeads(): Promise<Lead[]> {
   await ensureSchema()
-  const { rows } = await getPooledSql()`
-    SELECT id, name, phone, message, status, admin_notes, created_at, updated_at
-    FROM leads ORDER BY created_at DESC
-  `
+  const { rows } = await getPooledPool().query(
+    `SELECT ${LEAD_COLUMNS} FROM leads ORDER BY created_at DESC`
+  )
   return rows.map(mapRow)
 }
 
 export async function getLeadById(id: number): Promise<Lead | undefined> {
   await ensureSchema()
-  const { rows } = await getPooledSql()`
-    SELECT id, name, phone, message, status, admin_notes, created_at, updated_at
-    FROM leads WHERE id = ${id}
-  `
+  const { rows } = await getPooledPool().query(
+    `SELECT ${LEAD_COLUMNS} FROM leads WHERE id = $1`,
+    [id]
+  )
   return rows[0] ? mapRow(rows[0]) : undefined
 }
 
 export async function createLead(input: LeadInput): Promise<Lead> {
   await ensureSchema()
-  const { rows } = await getPooledSql()`
-    INSERT INTO leads (name, phone, message)
-    VALUES (${input.name.trim()}, ${input.phone.trim()}, ${(input.message ?? '').trim()})
-    RETURNING id, name, phone, message, status, admin_notes, created_at, updated_at
-  `
+  const { rows } = await getPooledPool().query(
+    `INSERT INTO leads (name, phone, message)
+     VALUES ($1, $2, $3)
+     RETURNING ${LEAD_COLUMNS}`,
+    [input.name.trim(), input.phone.trim(), (input.message ?? '').trim()]
+  )
   if (!rows[0]) {
     throw new Error('Не удалось сохранить заявку')
   }
@@ -124,32 +139,42 @@ export async function updateLead(id: number, input: LeadInput): Promise<Lead | u
   const existing = await getLeadById(id)
   if (!existing) return undefined
 
-  const { rows } = await getPooledSql()`
-    UPDATE leads SET
-      name = ${input.name.trim()},
-      phone = ${input.phone.trim()},
-      message = ${(input.message ?? '').trim()},
-      status = ${input.status ?? existing.status},
-      admin_notes = ${(input.admin_notes ?? '').trim()},
+  const { rows } = await getPooledPool().query(
+    `UPDATE leads SET
+      name = $1,
+      phone = $2,
+      message = $3,
+      status = $4,
+      admin_notes = $5,
       updated_at = NOW()
-    WHERE id = ${id}
-    RETURNING id, name, phone, message, status, admin_notes, created_at, updated_at
-  `
+     WHERE id = $6
+     RETURNING ${LEAD_COLUMNS}`,
+    [
+      input.name.trim(),
+      input.phone.trim(),
+      (input.message ?? '').trim(),
+      input.status ?? existing.status,
+      (input.admin_notes ?? '').trim(),
+      id,
+    ]
+  )
   return rows[0] ? mapRow(rows[0]) : undefined
 }
 
 export async function deleteLead(id: number): Promise<boolean> {
   await ensureSchema()
-  const { rowCount } = await getPooledSql()`DELETE FROM leads WHERE id = ${id}`
+  const { rowCount } = await getPooledPool().query('DELETE FROM leads WHERE id = $1', [id])
   return (rowCount ?? 0) > 0
 }
 
 export async function getStats(): Promise<{ total: number; byStatus: { status: string; count: number }[] }> {
   await ensureSchema()
-  const { rows: byStatus } = await getPooledSql()`
-    SELECT status, COUNT(*)::int as count FROM leads GROUP BY status
-  `
-  const { rows: totalRows } = await getPooledSql()`SELECT COUNT(*)::int as count FROM leads`
+  const { rows: byStatus } = await getPooledPool().query(
+    'SELECT status, COUNT(*)::int as count FROM leads GROUP BY status'
+  )
+  const { rows: totalRows } = await getPooledPool().query(
+    'SELECT COUNT(*)::int as count FROM leads'
+  )
   return {
     total: Number(totalRows[0]?.count ?? 0),
     byStatus: byStatus.map((r) => ({ status: String(r.status), count: Number(r.count) })),
@@ -157,7 +182,11 @@ export async function getStats(): Promise<{ total: number; byStatus: { status: s
 }
 
 export async function runMigration(): Promise<void> {
-  const migrateSql = neon(getDirectConnectionString(), { fullResults: true })
-  await migrateSql(MIGRATE_SQL)
-  migrated = true
+  const pool = createPool(getDirectConnectionString())
+  try {
+    await pool.query(MIGRATE_SQL)
+    migrated = true
+  } finally {
+    await pool.end()
+  }
 }

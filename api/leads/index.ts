@@ -22,7 +22,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return methodNotAllowed(res, ['GET', 'POST'])
   } catch (err) {
     console.error(err)
-    const detail = err instanceof Error ? err.message : 'Ошибка сервера'
-    return json(res, 500, { error: detail })
+    return json(res, 500, { error: 'Ошибка сервера' })
   }
 }

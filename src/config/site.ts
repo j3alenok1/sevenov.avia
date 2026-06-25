@@ -10,9 +10,9 @@ export const siteConfig = {
     clients: '100+',
   },
   contacts: {
-    phone: '+7 (7XX) XXX-XX-XX',
-    phoneRaw: '77XXXXXXXXX',
-    whatsapp: '77XXXXXXXXX',
+    phone: '+7 (702) 240-06-00',
+    phoneRaw: '77022400600',
+    whatsapp: '77022400600',
     email: 'info@semenovavia.kz',
     instagram: 'https://instagram.com/semenov.avia',
     instagramHandle: '@semenov.avia',

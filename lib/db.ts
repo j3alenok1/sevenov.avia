@@ -1,26 +1,47 @@
-import { createPool } from '@vercel/postgres'
+import { createClient, createPool, postgresConnectionString } from '@vercel/postgres'
+import type { VercelClient, VercelPool } from '@vercel/postgres'
 import type { Lead, LeadInput } from './types.js'
 
-function getConnectionString(): string | undefined {
-  return (
-    process.env.POSTGRES_URL
-    ?? process.env.DATABASE_URL
-    ?? process.env.PRISMA_DATABASE_URL
-    ?? process.env.STORAGE_URL
-  )
+type DbHandle = {
+  sql: VercelPool['sql']
+  query: (text: string) => Promise<unknown>
 }
 
-let pool: ReturnType<typeof createPool> | null = null
+let db: DbHandle | null = null
 
-function getPool() {
-  if (!pool) {
-    const connectionString = getConnectionString()
-    if (!connectionString) {
-      throw new Error('Не задан URL базы. Выполните: npx vercel env pull .env.local')
-    }
-    pool = createPool({ connectionString })
+function isPooledUrl(url: string): boolean {
+  return url.includes('-pooler.') || url.includes('localhost') || url.includes('127.0.0.1')
+}
+
+function getDb(): DbHandle {
+  if (db) return db
+
+  const poolUrl = postgresConnectionString('pool') ?? process.env.STORAGE_URL
+
+  if (poolUrl && isPooledUrl(poolUrl)) {
+    const pool: VercelPool = createPool({ connectionString: poolUrl })
+    db = pool
+    return pool
   }
-  return pool
+
+  const directUrl =
+    postgresConnectionString('direct')
+    ?? process.env.DATABASE_URL
+    ?? process.env.PRISMA_DATABASE_URL
+    ?? (poolUrl && !isPooledUrl(poolUrl) ? poolUrl : undefined)
+
+  if (directUrl) {
+    const client: VercelClient = createClient({ connectionString: directUrl })
+    db = {
+      sql: client.sql.bind(client),
+      query: (text: string) => client.query(text),
+    }
+    return db
+  }
+
+  throw new Error(
+    'Не задан POSTGRES_URL. Подключите Prisma Postgres в Vercel и выполните: npx vercel env pull .env.local'
+  )
 }
 
 const MIGRATE_SQL = `
@@ -40,7 +61,7 @@ let migrated = false
 
 export async function ensureSchema(): Promise<void> {
   if (migrated) return
-  await getPool().query(MIGRATE_SQL)
+  await getDb().query(MIGRATE_SQL)
   migrated = true
 }
 
@@ -59,7 +80,7 @@ function mapRow(row: Record<string, unknown>): Lead {
 
 export async function getAllLeads(): Promise<Lead[]> {
   await ensureSchema()
-  const { rows } = await getPool().sql`
+  const { rows } = await getDb().sql`
     SELECT id, name, phone, message, status, admin_notes, created_at, updated_at
     FROM leads ORDER BY created_at DESC
   `
@@ -68,7 +89,7 @@ export async function getAllLeads(): Promise<Lead[]> {
 
 export async function getLeadById(id: number): Promise<Lead | undefined> {
   await ensureSchema()
-  const { rows } = await getPool().sql`
+  const { rows } = await getDb().sql`
     SELECT id, name, phone, message, status, admin_notes, created_at, updated_at
     FROM leads WHERE id = ${id}
   `
@@ -77,7 +98,7 @@ export async function getLeadById(id: number): Promise<Lead | undefined> {
 
 export async function createLead(input: LeadInput): Promise<Lead> {
   await ensureSchema()
-  const { rows } = await getPool().sql`
+  const { rows } = await getDb().sql`
     INSERT INTO leads (name, phone, message)
     VALUES (${input.name.trim()}, ${input.phone.trim()}, ${(input.message ?? '').trim()})
     RETURNING id, name, phone, message, status, admin_notes, created_at, updated_at
@@ -90,7 +111,7 @@ export async function updateLead(id: number, input: LeadInput): Promise<Lead | u
   const existing = await getLeadById(id)
   if (!existing) return undefined
 
-  const { rows } = await getPool().sql`
+  const { rows } = await getDb().sql`
     UPDATE leads SET
       name = ${input.name.trim()},
       phone = ${input.phone.trim()},
@@ -106,16 +127,16 @@ export async function updateLead(id: number, input: LeadInput): Promise<Lead | u
 
 export async function deleteLead(id: number): Promise<boolean> {
   await ensureSchema()
-  const { rowCount } = await getPool().sql`DELETE FROM leads WHERE id = ${id}`
+  const { rowCount } = await getDb().sql`DELETE FROM leads WHERE id = ${id}`
   return (rowCount ?? 0) > 0
 }
 
 export async function getStats(): Promise<{ total: number; byStatus: { status: string; count: number }[] }> {
   await ensureSchema()
-  const { rows: byStatus } = await getPool().sql`
+  const { rows: byStatus } = await getDb().sql`
     SELECT status, COUNT(*)::int as count FROM leads GROUP BY status
   `
-  const { rows: totalRows } = await getPool().sql`SELECT COUNT(*)::int as count FROM leads`
+  const { rows: totalRows } = await getDb().sql`SELECT COUNT(*)::int as count FROM leads`
   return {
     total: Number(totalRows[0]?.count ?? 0),
     byStatus: byStatus.map((r) => ({ status: String(r.status), count: Number(r.count) })),
@@ -123,6 +144,16 @@ export async function getStats(): Promise<{ total: number; byStatus: { status: s
 }
 
 export async function runMigration(): Promise<void> {
-  await getPool().query(MIGRATE_SQL)
+  const directUrl =
+    postgresConnectionString('direct')
+    ?? process.env.DATABASE_URL
+    ?? process.env.PRISMA_DATABASE_URL
+
+  if (!directUrl) {
+    throw new Error('Для миграции нужен POSTGRES_URL_NON_POOLING или DATABASE_URL')
+  }
+
+  const client = createClient({ connectionString: directUrl })
+  await client.query(MIGRATE_SQL)
   migrated = true
 }

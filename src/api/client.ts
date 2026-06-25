@@ -41,13 +41,29 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   }
   if (token) headers.Authorization = `Bearer ${token}`
 
-  const res = await fetch(path, { ...options, headers })
-  const data = await res.json().catch(() => ({}))
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), 25000)
 
-  if (!res.ok) {
-    throw new Error(data.error ?? 'Ошибка запроса')
+  try {
+    const res = await fetch(path, {
+      ...options,
+      headers,
+      signal: controller.signal,
+    })
+    const data = await res.json().catch(() => ({}))
+
+    if (!res.ok) {
+      throw new Error(data.error ?? 'Ошибка запроса')
+    }
+    return data as T
+  } catch (err) {
+    if (err instanceof Error && err.name === 'AbortError') {
+      throw new Error('Сервер не отвечает. Попробуйте позже.')
+    }
+    throw err
+  } finally {
+    clearTimeout(timeout)
   }
-  return data as T
 }
 
 export const api = {

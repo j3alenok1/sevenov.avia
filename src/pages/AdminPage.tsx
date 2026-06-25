@@ -7,6 +7,8 @@ import {
   type Lead,
   type LeadStatus,
 } from '../api/client'
+import { exportLeadsToExcel } from '../utils/exportLeads'
+import { formatPhone } from '../utils/phoneMask'
 import './Admin.css'
 
 const STATUSES: LeadStatus[] = ['new', 'processing', 'done', 'cancelled']
@@ -22,7 +24,7 @@ type EditForm = {
 function toForm(lead: Lead): EditForm {
   return {
     name: lead.name,
-    phone: lead.phone,
+    phone: formatPhone(lead.phone),
     message: lead.message,
     status: lead.status,
     admin_notes: lead.admin_notes,
@@ -110,6 +112,14 @@ export function AdminPage() {
     navigate('/admin/login')
   }
 
+  const handleExport = () => {
+    if (leads.length === 0) {
+      setError('Нет заявок для экспорта')
+      return
+    }
+    exportLeadsToExcel(leads)
+  }
+
   const formatDate = (iso: string) => {
     const normalized = iso.includes('T') ? iso : iso.replace(' ', 'T')
     return new Date(normalized).toLocaleString('ru-RU', {
@@ -129,6 +139,9 @@ export function AdminPage() {
           <p>Всего: {total}</p>
         </div>
         <div className="admin__header-actions">
+          <button type="button" className="btn btn-outline" onClick={handleExport} disabled={leads.length === 0}>
+            Скачать Excel
+          </button>
           <button type="button" className="btn btn-outline" onClick={load}>Обновить</button>
           <a href="/" className="btn btn-outline">На сайт</a>
           <button type="button" className="btn btn-outline" onClick={logout}>Выйти</button>
@@ -232,8 +245,11 @@ export function AdminPage() {
               <label className="admin__field">
                 <span>Телефон</span>
                 <input
+                  type="tel"
+                  inputMode="tel"
+                  placeholder="+7 747 126 24 75"
                   value={form.phone}
-                  onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                  onChange={(e) => setForm({ ...form, phone: formatPhone(e.target.value) })}
                 />
               </label>
               <label className="admin__field admin__field--full">
@@ -244,16 +260,20 @@ export function AdminPage() {
                   onChange={(e) => setForm({ ...form, message: e.target.value })}
                 />
               </label>
-              <label className="admin__field">
+              <label className="admin__field admin__field--full">
                 <span>Статус</span>
-                <select
-                  value={form.status}
-                  onChange={(e) => setForm({ ...form, status: e.target.value as LeadStatus })}
-                >
+                <div className="admin__status-picker">
                   {STATUSES.map((s) => (
-                    <option key={s} value={s}>{STATUS_LABELS[s]}</option>
+                    <button
+                      key={s}
+                      type="button"
+                      className={`admin__status-option admin__status-option--${s} ${form.status === s ? 'admin__status-option--active' : ''}`}
+                      onClick={() => setForm({ ...form, status: s })}
+                    >
+                      {STATUS_LABELS[s]}
+                    </button>
                   ))}
-                </select>
+                </div>
               </label>
               <label className="admin__field admin__field--full">
                 <span>Заметки администратора</span>

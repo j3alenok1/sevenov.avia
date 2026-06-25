@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { siteConfig } from '../config/site'
 import { api } from '../api/client'
+import { formatPhone, isPhoneComplete } from '../utils/phoneMask'
 import { ScrollReveal } from './ScrollReveal'
 import './Contact.css'
 
@@ -11,6 +12,11 @@ export function Contact() {
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
+    if (!isPhoneComplete(form.phone)) {
+      setStatus('error')
+      setErrorMsg('Введите номер полностью: +7 и 10 цифр')
+      return
+    }
     setStatus('loading')
     setErrorMsg('')
 
@@ -147,10 +153,11 @@ export function Contact() {
                 <span>Телефон</span>
                 <input
                   type="tel"
+                  inputMode="tel"
                   required
-                  placeholder="+7 (702) 240-06-00"
+                  placeholder="+7 747 126 24 75"
                   value={form.phone}
-                  onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                  onChange={(e) => setForm({ ...form, phone: formatPhone(e.target.value) })}
                   disabled={status === 'loading'}
                 />
               </label>
